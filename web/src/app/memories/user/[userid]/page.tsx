@@ -1,5 +1,5 @@
 import { cookies } from 'next/headers'
-import { EmptyMemories } from '../components/EmptyMemories'
+import { EmptyMemories } from '@/components/EmptyMemories'
 import { api } from '@/lib/api'
 import dayjs from 'dayjs'
 import ptBr from 'dayjs/locale/pt-br'
@@ -16,19 +16,16 @@ interface Memory {
   createdAt: string
 }
 
-export default async function Home() {
+export default async function Home({ params }: { params: { userid: string } }) {
   const isAuthenticated = cookies().has('token')
 
   if (!isAuthenticated) {
     return <EmptyMemories />
   }
 
-  const token = cookies().get('token')?.value
-  const response = await api.get('/memories', {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  })
+  console.log(params.userid)
+
+  const response = await api.get(`/memories/user/${params.userid}`)
 
   const memories: Memory[] = response.data
 

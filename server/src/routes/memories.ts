@@ -3,11 +3,13 @@ import { prisma } from "../lib/prisma";
 import { z } from "zod";
 
 export async function memoriesRoutes(app: FastifyInstance) {
-  app.addHook("preHandler", async (request) => {
-    await request.jwtVerify();
-  });
+  // app.addHook("preHandler", async (request) => {
+  //   await request.jwtVerify();
+  // });
 
   app.get("/memories", async (request) => {
+    request.jwtVerify();
+
     const memories = await prisma.memory.findMany({
       where: {
         userId: request.user.sub,
@@ -22,11 +24,14 @@ export async function memoriesRoutes(app: FastifyInstance) {
         id: memory.id,
         coverUrl: memory.coverUrl,
         excerpt: memory.content.substring(0, 115).concat("..."),
+        createdAt: memory.createdAt,
       };
     });
   });
 
   app.get("/memories/:id", async (request, reply) => {
+    request.jwtVerify();
+
     const paramsSchema = z.object({
       id: z.string().uuid(),
     });
@@ -46,7 +51,53 @@ export async function memoriesRoutes(app: FastifyInstance) {
     return memory;
   });
 
+  app.get("/memories/user/:userId", async (request, reply) => {
+    const paramsSchema = z.object({
+      userId: z.string().uuid(),
+    });
+
+    const { userId } = paramsSchema.parse(request.params);
+
+    const user = await prisma.user.findFirstOrThrow({
+      where: {
+        id: userId,
+      },
+    });
+
+    if (!user) {
+      return reply.status(401).send();
+    }
+
+    const memories = await prisma.memory.findMany({
+      where: {
+        userId,
+        isPublic: true,
+      },
+      include: {
+        user: {
+          select: {
+            avatarUrl: true,
+            name: true,
+          },
+        },
+      },
+    });
+
+    return memories.map((memory) => {
+      return {
+        id: memory.id,
+        coverUrl: memory.coverUrl,
+        excerpt: memory.content.substring(0, 115).concat("..."),
+        createdAt: memory.createdAt,
+        avatarUrl: true,
+        name: true,
+      };
+    });
+  });
+
   app.post("/memories", async (request) => {
+    request.jwtVerify();
+
     const bodySchema = z.object({
       content: z.string(),
       coverUrl: z.string(),
@@ -68,6 +119,8 @@ export async function memoriesRoutes(app: FastifyInstance) {
   });
 
   app.put("/memories/:id", async (request, reply) => {
+    request.jwtVerify();
+
     const paramsSchema = z.object({
       id: z.string().uuid(),
     });
@@ -107,6 +160,8 @@ export async function memoriesRoutes(app: FastifyInstance) {
   });
 
   app.delete("/memories/:id", async (request, reply) => {
+    request.jwtVerify();
+
     const paramsSchema = z.object({
       id: z.string().uuid(),
     });

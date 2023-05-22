@@ -75,4 +75,23 @@ export async function authRoutes(app: FastifyInstance) {
       token,
     };
   });
+
+  app.get("/user/:userId", async (request) => {
+    const paramsSchema = z.object({
+      userId: z.string().uuid(),
+    });
+
+    const { userId } = paramsSchema.parse(request.params);
+
+    const user = await prisma.user.findUnique({
+      where: {
+        id: userId,
+      },
+      select: {
+        name: true,
+      },
+    });
+
+    return user;
+  });
 }
